@@ -5,7 +5,7 @@ services:
       - "5672:5672"
       - "15672:15672"
     volumes:
-      - C:/projetos/rabbit:/var/lib/rabbitmq
+      - rabbitmq_data:/var/lib/rabbitmq
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "status"]
       interval: 30s
@@ -13,9 +13,9 @@ services:
       retries: 3
 
 
-  produtor:
+  api:
     build:
-      context: ./produtor
+      context: ./api
       dockerfile: Dockerfile
     environment:
       - RABBITMQ_HOST=rabbitmq
@@ -24,14 +24,20 @@ services:
     ports:
       - "3000:3000"
 
-  consumidor:
-    build:
-      context: ./consumidor
-      dockerfile: Dockerfile
+  mysql:
+    image: mysql:5.7
     environment:
-      - RABBITMQ_HOST=rabbitmq
-    depends_on:
-      - rabbitmq
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: sistema_diplomas
+      MYSQL_USER: user
+      MYSQL_PASSWORD: userpassword
+    volumes:
+      - mysqldata:/var/lib/mysql
+      - ./db-mysql/ddl.sql:/docker-entrypoint-initdb.d/ddl.sql  # Montar o script DDL no diretório correto
+    ports:
+      - "3306:3306"
+
 
 volumes:
+  mysqldata:
   rabbitmq_data:
