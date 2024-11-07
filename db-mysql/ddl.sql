@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS diplomas (
     data_nascimento DATE,
     numero_rg VARCHAR(20),
     data_emissao DATE,
-    template_diploma TEXT
+    diploma_path TEXT
 );
 
 CREATE TABLE IF NOT EXISTS assinaturas (

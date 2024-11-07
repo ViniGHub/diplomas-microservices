@@ -15,5 +15,14 @@
     "url": "https://github.com/ViniGHub/diplomas-microservices/issues"
   },
   "homepage": "https://github.com/ViniGHub/diplomas-microservices#readme",
-  "description": ""
+  "description": "",
+  "dependencies": {
+    "amqplib": "^0.10.4",
+    "express": "^4.21.1",
+    "fs": "^0.0.1-security",
+    "mysql2": "^3.11.4",
+    "path": "^0.12.7",
+    "puppeteer": "^23.7.0",
+    "redis": "^4.7.0"
+  }
 }

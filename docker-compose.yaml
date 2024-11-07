@@ -18,11 +18,32 @@ services:
       context: ./api
       dockerfile: Dockerfile
     environment:
+      - DB_HOST=mysql
+      - DB_USER=user
+      - DB_PASSWORD=userpassword
+      - DB_DATABASE=sistema_diplomas
       - RABBITMQ_HOST=rabbitmq
     depends_on:
       - rabbitmq
+      - mysql
     ports:
       - "3000:3000"
+
+  worker:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+    environment:
+      - DB_HOST=mysql
+      - DB_USER=user
+      - DB_PASSWORD=userpassword
+      - DB_DATABASE=sistema_diplomas
+      - RABBITMQ_HOST=rabbitmq
+    depends_on:
+      - rabbitmq
+      - mysql
+    ports:
+      - "3001:3001"
 
   mysql:
     image: mysql:5.7
@@ -36,7 +57,19 @@ services:
       - ./db-mysql/ddl.sql:/docker-entrypoint-initdb.d/ddl.sql  # Montar o script DDL no diretório correto
     ports:
       - "3306:3306"
+      
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
 
+  redisinsight:
+    image: redis/redisinsight:latest
+    ports:
+      - "5540:5540"
+    environment:
+      - REDISINSIGHT_AUTH_USERNAME=admin
+      - REDISINSIGHT_AUTH_PASSWORD=admin123
 
 volumes:
   mysqldata:
