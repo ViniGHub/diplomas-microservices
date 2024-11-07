@@ -2,8 +2,7 @@ const mysql = require("mysql2");
 const amqp = require("amqplib");
 const fs = require("fs");
 const path = require("path");
-const puppeteer = require("puppeteer");
-
+const pdf = require("html-pdf");
 
 // Caminho do arquivo HTML
 const caminhoTemplate = path.join(__dirname, "template.html");
@@ -23,11 +22,11 @@ function substituirVariaveisNoHTML(arquivo, queue) {
     console.log(queue);
 
     // Para cada variável no objeto de dados, substitui a chave no HTML
-    for (const chave in dados) {
-      const valor = dados[chave];
-      const regex = new RegExp(`{{${chave}}}`, "g"); // Cria uma expressão regular
-      htmlModificado = htmlModificado.replace(regex, valor);
-    }
+    // for (const chave in dados) {
+    //   const valor = dados[chave];
+    //   const regex = new RegExp(`{{${chave}}}`, "g"); // Cria uma expressão regular
+    //   htmlModificado = htmlModificado.replace(regex, valor);
+    // }
 
     // Exibe o HTML com as variáveis substituídas
     console.log(htmlModificado);
@@ -53,39 +52,36 @@ function substituirVariaveisNoHTML(arquivo, queue) {
 }
 
 // Função para gerar o PDF a partir do HTML
-async function gerarPDF(htmlConteudo) {
-  // Inicia o Puppeteer e cria uma instância do navegador
-  const browser = await puppeteer.launch();
-  const page = await browser.newPage();
-
-  // Configura a página com o conteúdo HTML modificado
-  await page.setContent(htmlConteudo);
-
-  // Gera o PDF
-  await page.pdf({
-    path: path.join(__dirname, "../storage/certificado_modificado.pdf"), // Caminho para salvar o PDF
-    format: "A4",
-    printBackground: true, // Garante que o fundo da página seja impresso
-  });
-
-  console.log("PDF gerado com sucesso: certificado_modificado.pdf");
-
-  // Fecha o navegador
-  await browser.close();
+async function gerarPDF(htmlContent) {
+  pdf
+    .create(htmlContent)
+    .toFile(
+      path.join(__dirname, "../storage/certificado_modificado.pdf"),
+      (err, res) => {
+        if (err) return console.log(err);
+        console.log("PDF generated successfully:", res);
+      }
+    );
 }
 
+// Conecta ao RabbitMQ
+(async () => {
+  const connection = await amqp.connect("amqp://rabbitmq");
+  const channel = await connection.createChannel();
+  const queue = "diplomasQueue";
 
-channel.consume(
-  queue,
-  // Chama a função para substituir as variáveis no HTML
-  async () => {
-    const connection = await amqp.connect("amqp://rabbitmq");
-    const channel = await connection.createChannel();
-    const queue = "diplomasQueue";
+  // Cria a fila
+  await channel.assertQueue(queue, { durable: true });
 
-    substituirVariaveisNoHTML(caminhoTemplate, queue)
-  },
-  {
-    noAck: true,
-  }
-);
+  // Consome a fila
+  channel.consume(
+    queue,
+    // Chama a função para substituir as variáveis no HTML
+    async () => {
+      substituirVariaveisNoHTML(caminhoTemplate, queue);
+    },
+    {
+      noAck: true,
+    }
+  );
+})();

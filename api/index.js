@@ -3,6 +3,7 @@ const mysql = require("mysql2");
 const amqp = require("amqplib");
 const redis = require("redis");
 const bodyParser = require("body-parser");
+const uuidv4 = require("uuid").v4;
 
 const app = express();
 app.use(bodyParser.json());
@@ -78,7 +79,7 @@ app.post("/diploma", async (req, res) => {
       data_nascimento,
       numero_rg,
       data_emissao,
-      diploma_path,
+      diploma_path + "_" + uuidv4() + ".pdf",
     ],
     (err, result) => {
       if (err) {

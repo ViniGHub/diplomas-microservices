@@ -51,6 +51,18 @@ services:
     ports:
       - "3306:3306"
 
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+
+  redisinsight:
+    image: redis/redisinsight:latest
+    ports:
+      - "5540:5540"
+    environment:
+      - REDISINSIGHT_AUTH_USERNAME=admin
+      - REDISINSIGHT_AUTH_PASSWORD=admin123
 
 volumes:
   mysqldata:
