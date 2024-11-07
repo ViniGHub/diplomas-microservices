@@ -74,14 +74,17 @@ async function gerarPDF(htmlConteudo) {
   await browser.close();
 }
 
-const connection = await amqp.connect("amqp://rabbitmq");
-const channel = await connection.createChannel();
-const queue = "diplomasQueue";
 
 channel.consume(
   queue,
   // Chama a função para substituir as variáveis no HTML
-  () => substituirVariaveisNoHTML(caminhoTemplate, queue),
+  async () => {
+    const connection = await amqp.connect("amqp://rabbitmq");
+    const channel = await connection.createChannel();
+    const queue = "diplomasQueue";
+
+    substituirVariaveisNoHTML(caminhoTemplate, queue)
+  },
   {
     noAck: true,
   }
