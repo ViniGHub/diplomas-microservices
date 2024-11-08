@@ -8,6 +8,7 @@ const uuidv4 = require("uuid").v4;
 const app = express();
 app.use(bodyParser.json());
 
+
 // Conexão com Redis
 const client = redis.createClient();
 
@@ -21,7 +22,7 @@ client.connect().then(() => {
 
 // Conexão com o MySQL
 const connection = mysql.createConnection({
-  host: "mysql",
+  host: "localhost",
   user: "user",
   password: "userpassword",
   database: "sistema_diplomas",
@@ -35,7 +36,7 @@ connection.connect((err) => {
 // Conexão RabbitMQ
 async function sendToQueue(message) {
   try {
-    const connection = await amqp.connect("amqp://rabbitmq");
+    const connection = await amqp.connect("amqp://localhost");
     const channel = await connection.createChannel();
     const queue = "diplomasQueue";
 
@@ -125,7 +126,7 @@ app.get("obterDiploma/:id", async (req, res) => {
 });
 
 // Iniciar servidor
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
 });

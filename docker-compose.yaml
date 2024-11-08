@@ -12,45 +12,6 @@ services:
       timeout: 10s
       retries: 3
 
-
-  api:
-    build:
-      context: ./api
-      dockerfile: Dockerfile
-    environment:
-      - DB_HOST=mysql
-      - DB_USER=user
-      - DB_PASSWORD=userpassword
-      - DB_DATABASE=sistema_diplomas
-      - RABBITMQ_HOST=rabbitmq
-    depends_on:
-      - rabbitmq
-      - mysql
-    ports:
-      - "3000:3000"
-
-  worker:
-    build:
-      context: ./worker
-      dockerfile: Dockerfile
-    environment:
-      - RABBITMQ_HOST=rabbitmq
-    depends_on:
-      - rabbitmq
-
-  mysql:
-    image: mysql:5.7
-    environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: sistema_diplomas
-      MYSQL_USER: user
-      MYSQL_PASSWORD: userpassword
-    volumes:
-      - mysqldata:/var/lib/mysql
-      - ./db-mysql/ddl.sql:/docker-entrypoint-initdb.d/ddl.sql:ro  # Montar o script DDL no diretório correto
-    ports:
-      - "3306:3306"
-
   redis:
     image: redis:alpine
     ports:
@@ -64,6 +25,51 @@ services:
       - REDISINSIGHT_AUTH_USERNAME=admin
       - REDISINSIGHT_AUTH_PASSWORD=admin123
 
+  mysql:
+    image: mysql:5.7
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: sistema_diplomas
+      MYSQL_USER: user
+      MYSQL_PASSWORD: userpassword
+    volumes:
+      - mysqldata:/var/lib/mysql
+      - ./db-mysql/ddl.sql:/docker-entrypoint-initdb.d/ddl.sql # Montar o script DDL no diretório correto
+    ports:
+      - "3306:3306"
+
+  # api:
+  #   build:
+  #     context: ./api
+  #     dockerfile: Dockerfile
+  #   environment:
+  #     - DB_HOST=mysql
+  #     - DB_USER=user
+  #     - DB_PASSWORD=userpassword
+  #     - DB_DATABASE=sistema_diplomas
+  #     - RABBITMQ_HOST=rabbitmq
+  #   depends_on:
+  #     - rabbitmq
+  #     - mysql
+  #     - redis
+  #   links:
+  #     - rabbitmq
+  #     - mysql
+  #     - redis
+  #   ports:
+  #     - "3000:3000"
+
+  # worker:
+  #   build:
+  #     context: ./worker
+  #     dockerfile: Dockerfile
+  #   environment:
+  #     - RABBITMQ_HOST=rabbitmq
+  #   depends_on:
+  #     - rabbitmq
+  #     - redis
+
 volumes:
   mysqldata:
   rabbitmq_data:
+  cache: 

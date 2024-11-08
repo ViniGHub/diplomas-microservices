@@ -1,14 +1,13 @@
-const mysql = require("mysql2");
 const amqp = require("amqplib");
 const fs = require("fs");
 const path = require("path");
-const pdf = require("html-pdf");
+const PuppeteerHTMLPDF = require("puppeteer-html-pdf");
 
 // Caminho do arquivo HTML
 const caminhoTemplate = path.join(__dirname, "template.html");
 
 // Função para substituir as variáveis no HTML
-function substituirVariaveisNoHTML(arquivo, queue) {
+function substituirVariaveisNoHTML(arquivo, data) {
   // Lê o conteúdo do arquivo HTML
   fs.readFile(arquivo, "utf-8", (err, conteudo) => {
     if (err) {
@@ -19,14 +18,14 @@ function substituirVariaveisNoHTML(arquivo, queue) {
     // Substitui as variáveis no HTML
     let htmlModificado = conteudo;
 
-    console.log(queue);
+    const dados = JSON.parse(data.content.toString());
 
     // Para cada variável no objeto de dados, substitui a chave no HTML
-    // for (const chave in dados) {
-    //   const valor = dados[chave];
-    //   const regex = new RegExp(`{{${chave}}}`, "g"); // Cria uma expressão regular
-    //   htmlModificado = htmlModificado.replace(regex, valor);
-    // }
+    for (const chave in dados) {
+      const valor = dados[chave];
+      const regex = new RegExp(`{{${chave}}}`, "g"); // Cria uma expressão regular
+      htmlModificado = htmlModificado.replace(regex, valor);
+    }
 
     // Exibe o HTML com as variáveis substituídas
     console.log(htmlModificado);
@@ -47,41 +46,52 @@ function substituirVariaveisNoHTML(arquivo, queue) {
     // );
 
     // Chama a função para gerar o PDF a partir do HTML modificado
-    gerarPDF(htmlModificado);
+    try {
+      gerarPDF(htmlModificado);
+    } catch (error) {
+      console.error("Erro ao gerar PDF:", error);
+    }
   });
 }
 
 // Função para gerar o PDF a partir do HTML
 async function gerarPDF(htmlContent) {
-  pdf
-    .create(htmlContent)
-    .toFile(
-      path.join(__dirname, "../storage/certificado_modificado.pdf"),
-      (err, res) => {
-        if (err) return console.log(err);
-        console.log("PDF generated successfully:", res);
-      }
-    );
+  const htmlPDF = require("puppeteer-html-pdf");
+
+  const options = {
+    format: "A4",
+    path: path.join(__dirname, "diploma.pdf"),
+  };
+
+  try {
+    await htmlPDF.create(htmlContent, options);
+  } catch (error) {
+    console.log("htmlPDF error", error);
+  }
 }
 
 // Conecta ao RabbitMQ
 (async () => {
-  const connection = await amqp.connect("amqp://rabbitmq");
-  const channel = await connection.createChannel();
-  const queue = "diplomasQueue";
+  try {
+    const connection = await amqp.connect("amqp://localhost");
+    const channel = await connection.createChannel();
+    const queue = "diplomasQueue";
 
-  // Cria a fila
-  await channel.assertQueue(queue, { durable: true });
+    // Cria a fila
+    await channel.assertQueue(queue, { durable: true });
 
-  // Consome a fila
-  channel.consume(
-    queue,
-    // Chama a função para substituir as variáveis no HTML
-    async () => {
-      substituirVariaveisNoHTML(caminhoTemplate, queue);
-    },
-    {
-      noAck: true,
-    }
-  );
+    // Consome a fila
+    channel.consume(
+      queue,
+      // Chama a função para substituir as variáveis no HTML
+      async (data) => {
+        substituirVariaveisNoHTML(caminhoTemplate, data);
+      },
+      {
+        noAck: true,
+      }
+    );
+  } catch (error) {
+    console.error("Erro ao ler mensagem da fila:", error);
+  }
 })();
