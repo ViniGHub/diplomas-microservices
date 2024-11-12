@@ -8,35 +8,53 @@ const uuidv4 = require("uuid").v4;
 const app = express();
 app.use(bodyParser.json());
 
-
-// Conexão com Redis
-const client = redis.createClient();
+console.log("Tentando conectar ao Redis...");
+const client = redis.createClient({
+  url: "redis://redis:6379",
+  retry_strategy: () => 1000,
+  max_attempts: 10,
+  connect_timeout: 1000,
+  max_connect_timeout: 1000,
+  auth_pass: "redispassword",
+});
 
 client.on("error", (err) => {
   console.error("Erro ao conectar ao Redis:", err);
 });
 
-client.connect().then(() => {
+client.connect().then((a) => {
   console.log("Conectado ao Redis");
 });
+let connection;
+const mysqlInterval = setInterval(() => {
+  try {
+    connection = mysql.createConnection({
+      host: "mysql",
+      user: "user",
+      password: "userpassword",
+      database: "sistema_diplomas",
+    });
 
+    connection.connect((err) => {
+      try {
+        if (err) throw err;
+      console.log("Conectado ao MySQL!");
+      clearInterval(mysqlInterval);
+      } catch (error) {
+        console.error("Erro ao conectar ao MySQL:", error);
+      }
+      
+    });
+  } catch (error) {
+    console.error("Erro ao conectar ao MySQL:", error);
+  }
+}, 1000);
 // Conexão com o MySQL
-const connection = mysql.createConnection({
-  host: "localhost",
-  user: "user",
-  password: "userpassword",
-  database: "sistema_diplomas",
-});
-
-connection.connect((err) => {
-  if (err) throw err;
-  console.log("Conectado ao MySQL!");
-});
 
 // Conexão RabbitMQ
 async function sendToQueue(message) {
   try {
-    const connection = await amqp.connect("amqp://localhost");
+    const connection = await amqp.connect("amqp://rabbitmq");
     const channel = await connection.createChannel();
     const queue = "diplomasQueue";
 
@@ -69,6 +87,7 @@ app.post("/diploma", async (req, res) => {
   // Salvando os dados no MySQL
   const query = `INSERT INTO diplomas (nome_aluno, data_conclusao, nome_curso, nacionalidade, naturalidade, data_nascimento, numero_rg, data_emissao, diploma_path) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
+  const newLocal = diploma_path + "_" + uuidv4() + ".pdf";
   connection.query(
     query,
     [
@@ -80,7 +99,7 @@ app.post("/diploma", async (req, res) => {
       data_nascimento,
       numero_rg,
       data_emissao,
-      diploma_path + "_" + uuidv4() + ".pdf",
+      newLocal,
     ],
     (err, result) => {
       if (err) {
@@ -101,32 +120,45 @@ app.post("/diploma", async (req, res) => {
       });
 
       // Enviar os dados para a fila RabbitMQ
-      sendToQueue(req.body);
+      sendToQueue({...req.body, diploma_path: newLocal});
 
       res.status(200).send("Dados recebidos e processados com sucesso.");
     }
   );
 });
 
-app.get("obterDiploma/:id", async (req, res) => {
+app.get("/obterDiploma/:id", async (req, res) => {
+
+  client.get(req.params.id, (err, result) => {
+    if (err) {
+      console.error("Erro ao buscar no Redis:", err);
+      return res.status(500).send("Erro ao buscar no Redis.");
+    }
+
+    if (result) {
+      console.log("Encontrado no Redis");
+      return res.status(200).send(JSON.parse(result));
+    }
+
+  });
+
   const query = `SELECT nome_aluno, data_conclusao, nome_curso, nacionalidade, naturalidade, data_nascimento, numero_rg, data_emissao, diploma_path FROM diplomas WHERE id = ?`;
 
-  connection.query(
-    query,
-    [
-      req.params.id
-    ],
-    (err, result) => {
-      if (err) {
-        console.error("Erro ao salvar no MySQL:", err);
-        return res.status(500).send("Erro ao salvar no banco de dados.");
-      }
+  connection.query(query, [req.params.id], (err, result) => {
+    if (err) {
+      console.error("Erro ao salvar no MySQL:", err);
+      return res.status(500).send("Erro ao salvar no banco de dados.");
     }
-  );
+
+    client.set(req.params.id, JSON.stringify(result[0]), "EX", 60);
+
+    console.log(result[0]);
+    res.status(200).send(result[0]);
+  });
 });
 
 // Iniciar servidor
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
 });

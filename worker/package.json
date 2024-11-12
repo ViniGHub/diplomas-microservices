@@ -20,10 +20,9 @@
     "amqplib": "^0.10.4",
     "express": "^4.21.1",
     "fs": "^0.0.1-security",
-    "html-pdf": "^3.0.1",
     "mysql2": "^3.11.4",
     "path": "^0.12.7",
-    "puppeteer-html-pdf": "^1.1.1",
+    "puppeteer": "^23.7.1",
     "redis": "^4.7.0"
   }
 }

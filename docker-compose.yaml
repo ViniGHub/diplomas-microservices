@@ -38,36 +38,38 @@ services:
     ports:
       - "3306:3306"
 
-  # api:
-  #   build:
-  #     context: ./api
-  #     dockerfile: Dockerfile
-  #   environment:
-  #     - DB_HOST=mysql
-  #     - DB_USER=user
-  #     - DB_PASSWORD=userpassword
-  #     - DB_DATABASE=sistema_diplomas
-  #     - RABBITMQ_HOST=rabbitmq
-  #   depends_on:
-  #     - rabbitmq
-  #     - mysql
-  #     - redis
-  #   links:
-  #     - rabbitmq
-  #     - mysql
-  #     - redis
-  #   ports:
-  #     - "3000:3000"
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    environment:
+      - DB_HOST=mysql
+      - DB_USER=user
+      - DB_PASSWORD=userpassword
+      - DB_DATABASE=sistema_diplomas
+      - RABBITMQ_HOST=rabbitmq
+    depends_on:
+      - rabbitmq
+      - mysql
+      - redis
+    links:
+      - rabbitmq
+      - mysql
+      - redis
+    ports:
+      - "3000:3000"
 
-  # worker:
-  #   build:
-  #     context: ./worker
-  #     dockerfile: Dockerfile
-  #   environment:
-  #     - RABBITMQ_HOST=rabbitmq
-  #   depends_on:
-  #     - rabbitmq
-  #     - redis
+  worker:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+    volumes:
+      - ./storage:/usr/src/app/storage
+    environment:
+      - RABBITMQ_HOST=rabbitmq
+    depends_on:
+      - rabbitmq
+      - redis
 
 volumes:
   mysqldata:

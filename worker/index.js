@@ -1,7 +1,7 @@
 const amqp = require("amqplib");
 const fs = require("fs");
 const path = require("path");
-const PuppeteerHTMLPDF = require("puppeteer-html-pdf");
+const puppeteer = require("puppeteer");
 
 // Caminho do arquivo HTML
 const caminhoTemplate = path.join(__dirname, "template.html");
@@ -28,7 +28,6 @@ function substituirVariaveisNoHTML(arquivo, data) {
     }
 
     // Exibe o HTML com as variáveis substituídas
-    console.log(htmlModificado);
 
     // Opcional: Salvar o HTML modificado em um novo arquivo
     // fs.writeFile(
@@ -47,7 +46,18 @@ function substituirVariaveisNoHTML(arquivo, data) {
 
     // Chama a função para gerar o PDF a partir do HTML modificado
     try {
-      gerarPDF(htmlModificado);
+      gerarPDF(htmlModificado).then((pdf) => {
+        if (!pdf) {
+          console.error("Erro ao gerar PDF");
+          return;
+        }
+        console.log(dados);
+        const pdfPath = path.join(__dirname, "./storage", `${dados['diploma_path']}.pdf`);
+        console.log(pdfPath);
+        console.log(pdf);
+        fs.writeFileSync(pdfPath, pdf);
+        console.log("PDF generated and saved at:", pdfPath);
+      });
     } catch (error) {
       console.error("Erro ao gerar PDF:", error);
     }
@@ -55,42 +65,50 @@ function substituirVariaveisNoHTML(arquivo, data) {
 }
 
 // Função para gerar o PDF a partir do HTML
-async function gerarPDF(htmlContent) {
-  const htmlPDF = require("puppeteer-html-pdf");
-
-  const options = {
-    format: "A4",
-    path: path.join(__dirname, "diploma.pdf"),
-  };
-
-  try {
-    await htmlPDF.create(htmlContent, options);
-  } catch (error) {
-    console.log("htmlPDF error", error);
-  }
+async function gerarPDF(html) {
+  const browser = await puppeteer.launch({
+    args: ["--no-sandbox", "--disable-setuid-sandbox"], // Add these flags
+  });
+  const page = await browser.newPage();
+  await page.setContent(html);
+  const pdf = await page.pdf({ format: "A4", landscape: false });
+  await browser.close();
+  return pdf;
 }
 
 // Conecta ao RabbitMQ
 (async () => {
   try {
-    const connection = await amqp.connect("amqp://localhost");
-    const channel = await connection.createChannel();
-    const queue = "diplomasQueue";
+    const intervalId = setInterval(async () => {
+      const connection = await amqp.connect("amqp://rabbitmq").catch((err) => {
+        console.error("Erro ao conectar ao RabbitMQ:", err);
+      });
+      if (!connection) {
+        console.log("Erro ao conectar ao RabbitMQ");
+        return;
+      }
+      clearInterval(intervalId);
+
+      console.log("Conectado ao RabbitMQ");
+      const channel = await connection.createChannel();
+      const queue = "diplomasQueue";
+
+      await channel.assertQueue(queue, { durable: true });
+
+      // Consome a fila
+      channel.consume(
+        queue,
+        // Chama a função para substituir as variáveis no HTML
+        async (data) => {
+          substituirVariaveisNoHTML(caminhoTemplate, data);
+        },
+        {
+          noAck: true,
+        }
+      );
+    }, 1000);
 
     // Cria a fila
-    await channel.assertQueue(queue, { durable: true });
-
-    // Consome a fila
-    channel.consume(
-      queue,
-      // Chama a função para substituir as variáveis no HTML
-      async (data) => {
-        substituirVariaveisNoHTML(caminhoTemplate, data);
-      },
-      {
-        noAck: true,
-      }
-    );
   } catch (error) {
     console.error("Erro ao ler mensagem da fila:", error);
   }
