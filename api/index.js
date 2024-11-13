@@ -4,6 +4,8 @@ const amqp = require("amqplib");
 const redis = require("redis");
 const bodyParser = require("body-parser");
 const uuidv4 = require("uuid").v4;
+const open = require("open");
+const path = require("path");
 
 const app = express();
 app.use(bodyParser.json());
@@ -38,12 +40,11 @@ const mysqlInterval = setInterval(() => {
     connection.connect((err) => {
       try {
         if (err) throw err;
-      console.log("Conectado ao MySQL!");
-      clearInterval(mysqlInterval);
+        console.log("Conectado ao MySQL!");
+        clearInterval(mysqlInterval);
       } catch (error) {
         console.error("Erro ao conectar ao MySQL:", error);
       }
-      
     });
   } catch (error) {
     console.error("Erro ao conectar ao MySQL:", error);
@@ -120,7 +121,7 @@ app.post("/diploma", async (req, res) => {
       });
 
       // Enviar os dados para a fila RabbitMQ
-      sendToQueue({...req.body, diploma_path: newLocal});
+      sendToQueue({ ...req.body, diploma_path: newLocal });
 
       res.status(200).send("Dados recebidos e processados com sucesso.");
     }
@@ -128,7 +129,6 @@ app.post("/diploma", async (req, res) => {
 });
 
 app.get("/obterDiploma/:id", async (req, res) => {
-
   client.get(req.params.id, (err, result) => {
     if (err) {
       console.error("Erro ao buscar no Redis:", err);
@@ -137,9 +137,14 @@ app.get("/obterDiploma/:id", async (req, res) => {
 
     if (result) {
       console.log("Encontrado no Redis");
+
+      const pdfPath = "/storage/" + result[0].diploma_path;
+
+      // Abrir o PDF com o visualizador padrão
+      open(pdfPath);
+
       return res.status(200).send(JSON.parse(result));
     }
-
   });
 
   const query = `SELECT nome_aluno, data_conclusao, nome_curso, nacionalidade, naturalidade, data_nascimento, numero_rg, data_emissao, diploma_path FROM diplomas WHERE id = ?`;
@@ -153,6 +158,13 @@ app.get("/obterDiploma/:id", async (req, res) => {
     client.set(req.params.id, JSON.stringify(result[0]), "EX", 60);
 
     console.log(result[0]);
+
+    const pdfPath = path.join(__dirname, "./storage", result[0].diploma_path);
+
+    console.log(pdfPath);
+    // Abrir o PDF com o visualizador padrão
+    open(pdfPath);
+
     res.status(200).send(result[0]);
   });
 });
