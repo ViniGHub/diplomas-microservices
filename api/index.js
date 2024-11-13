@@ -4,8 +4,8 @@ const amqp = require("amqplib");
 const redis = require("redis");
 const bodyParser = require("body-parser");
 const uuidv4 = require("uuid").v4;
-const open = require("open");
 const path = require("path");
+const fs = require('fs');
 
 const app = express();
 app.use(bodyParser.json());
@@ -138,10 +138,29 @@ app.get("/obterDiploma/:id", async (req, res) => {
     if (result) {
       console.log("Encontrado no Redis");
 
-      const pdfPath = "/storage/" + result[0].diploma_path;
+      const pdfPath = path.join(__dirname, "./storage", result[0].diploma_path);
 
-      // Abrir o PDF com o visualizador padrão
-      open(pdfPath);
+      // Download function provided by express
+      // res.sendFile(pdfPath, (err) => {
+      //   if (err) {
+      //     // Caso haja algum erro ao enviar o arquivo, loga o erro
+      //     console.log(err);
+      //     res.status(500).send('Erro ao enviar o arquivo');
+      //   }
+      // });
+
+
+      const fileStream = fs.createReadStream(pdfPath);
+
+      fileStream.on('open', function () {
+        res.setHeader('Content-Disposition', 'attachment; filename=' + result[0].diploma_path);
+        fileStream.pipe(res);
+      });
+
+      fileStream.on('error', function (err) {
+        console.log("Erro ao enviar o arquivo:", err);
+        res.status(500).send('Erro no servidor');
+      });
 
       return res.status(200).send(JSON.parse(result));
     }
@@ -161,9 +180,34 @@ app.get("/obterDiploma/:id", async (req, res) => {
 
     const pdfPath = path.join(__dirname, "./storage", result[0].diploma_path);
 
+    // Download function provided by express
+    // res.sendFile(pdfPath, (err) => {
+    //   if (err) {
+    //     // Caso haja algum erro ao enviar o arquivo, loga o erro
+    //     console.log(err);
+    //     res.status(500).send('Erro ao enviar o arquivo');
+    //   }
+    // });
+
+    const fileStream = fs.createReadStream(pdfPath);
+
+    fileStream.on('open', function () {
+      res.setHeader('Content-Disposition', 'attachment; filename=' + result[0].diploma_path);
+      fileStream.pipe(res);
+    });
+
+    fileStream.on('error', function (err) {
+      console.log("Erro ao enviar o arquivo:", err);
+      res.status(500).send('Erro no servidor');
+    });
+
     console.log(pdfPath);
-    // Abrir o PDF com o visualizador padrão
-    open(pdfPath);
+    // Download function provided by express
+    // res.download(pdfPath, result[0].diploma_path, function (err) {
+    //   if (err) {
+    //     console.log(err);
+    //   }
+    // })
 
     res.status(200).send(result[0]);
   });
