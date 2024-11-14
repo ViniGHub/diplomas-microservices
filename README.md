@@ -1,10 +1,10 @@
 ## Passos para executar o projeto 
 
 Rode o comando para inicar:
-``docker compose up -d --build``
+  ``docker compose up -d --build``
 
 Execute o curl para gerar o diploma:
-curl --location 'http://localhost:3000/diploma' \
+  curl --location 'http://localhost:3000/diploma' \
 --header 'Content-Type: application/json' \
 --data '{
     "nome_aluno": "Vinicius Rodrigues",
@@ -26,5 +26,5 @@ curl --location 'http://localhost:3000/diploma' \
 
 
 Execute o curl para pegar o diploma:
-curl --location 'http://localhost:3000/obterDiploma/:id' \
+  curl --location 'http://localhost:3000/obterDiploma/:id' \
 --data ''
