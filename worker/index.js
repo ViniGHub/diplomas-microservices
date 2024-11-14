@@ -29,6 +29,7 @@ function substituirVariaveisNoHTML(arquivo, data) {
       htmlModificado = htmlModificado.replace(regex, valor);
     }
 
+
     // Exibe o HTML com as variáveis substituídas
 
     // Opcional: Salvar o HTML modificado em um novo arquivo
@@ -54,7 +55,7 @@ function substituirVariaveisNoHTML(arquivo, data) {
           return;
         }
         console.log(dados);
-        const pdfPath = path.join(__dirname, "./storage", `${dados['diploma_path']}.pdf`);
+        const pdfPath = path.join(__dirname, "./storage", `${dados['diploma_path']}`);
         console.log(pdfPath);
         console.log(pdf);
         fs.writeFileSync(pdfPath, pdf);

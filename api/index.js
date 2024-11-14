@@ -109,6 +109,8 @@ app.post("/diploma", async (req, res) => {
         return res.status(500).send("Erro ao salvar no banco de dados.");
       }
 
+      const diplomaId = result.insertId;
+
       // Adicionar assinaturas
       assinaturas.forEach(({ cargo, nome }) => {
         const queryAssinatura = `INSERT INTO assinaturas (diploma_id, cargo, nome) VALUES (?, ?, ?)`;
@@ -124,7 +126,7 @@ app.post("/diploma", async (req, res) => {
       // Enviar os dados para a fila RabbitMQ
       sendToQueue({ ...req.body, diploma_path: newLocal });
 
-      res.status(200).send("Dados recebidos e processados com sucesso.");
+      res.status(200).send({ message: "Dados recebidos e processados com sucesso. ID item:" + diplomaId, diploma_id: diplomaId });
     }
   );
 });
