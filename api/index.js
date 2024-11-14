@@ -132,47 +132,43 @@ app.post("/diploma", async (req, res) => {
 });
 
 app.get("/obterDiploma/:id", async (req, res) => {
-  client.get(req.params.id, (err, result) => {
-    if (err) { 
-      console.error("Erro ao buscar no Redis:", err);
-      return res.status(500).send("Erro ao buscar no Redis.");
-    }
+  let resultRedis = await client.get(req.params.id).catch((err) => {console.log(err);})
+  resultRedis = JSON.parse(resultRedis)
 
-    if (result) {
-      console.log("Encontrado no Redis");
+  if (resultRedis) {
+    console.log("Encontrado no Redis");
 
-      res.sendFile("/usr/src/app/storage/"+ result[0].diploma_path, (err) => {
-        if (err) {
-          // Caso haja algum erro ao enviar o arquivo, loga o erro
-          console.log(err);
-          res.status(500).send('Erro ao enviar o arquivo');
-        }
-      });
-    }
-  });
-
-  const query = `SELECT nome_aluno, data_conclusao, nome_curso, nacionalidade, naturalidade, data_nascimento, numero_rg, data_emissao, diploma_path FROM diplomas WHERE id = ?`;
-
-  connection.query(query, [req.params.id], (err, result) => {
-    if (err) {
-      console.error("Erro ao salvar no MySQL:", err);
-      return res.status(500).send("Erro ao salvar no banco de dados.");
-    }
-
-    client.set(req.params.id, JSON.stringify(result[0]), "EX", 60);
-
-    console.log(result[0]);
-
-    // Download function provided by express
-    res.sendFile("/usr/src/app/storage/"+ result[0].diploma_path, (err) => {
+    res.sendFile("/usr/src/app/storage/" + resultRedis.diploma_path, (err) => {
       if (err) {
         // Caso haja algum erro ao enviar o arquivo, loga o erro
         console.log(err);
         res.status(500).send('Erro ao enviar o arquivo');
       }
     });
+  } else {
+    console.log('1');
+    const query = `SELECT nome_aluno, data_conclusao, nome_curso, nacionalidade, naturalidade, data_nascimento, numero_rg, data_emissao, diploma_path FROM diplomas WHERE id = ?`;
 
-  });
+    connection.query(query, [req.params.id], (err, result) => {
+      if (err) {
+        console.error("Erro ao salvar no MySQL:", err);
+        return res.status(500).send("Erro ao salvar no banco de dados.");
+      }
+
+      client.set(req.params.id, JSON.stringify(result[0]), "EX", 60);
+
+      // Download function provided by express
+      res.sendFile("/usr/src/app/storage/" + result[0].diploma_path, (err) => {
+        if (err) {
+          // Caso haja algum erro ao enviar o arquivo, loga o erro
+          console.log(err);
+          res.status(500).send('Erro ao enviar o arquivo');
+        }
+      });
+
+    });
+  }
+
 });
 
 // Iniciar servidor
