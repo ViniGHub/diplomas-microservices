@@ -20,6 +20,8 @@ function substituirVariaveisNoHTML(arquivo, data) {
 
     const dados = JSON.parse(data.content.toString());
 
+    console.log(dados);
+
     // Para cada variável no objeto de dados, substitui a chave no HTML
     for (const chave in dados) {
       const valor = dados[chave];
